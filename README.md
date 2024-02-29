@@ -41,4 +41,4 @@ To be announced
 
 # Contributor 
 Son Thanh Luu - Japan Advanced Institute of Science and Technology (JAIST)  
-Prof. Minh Le Nguyen - Japan Advanced Institute of Science and Technology (JAIST)  
+Prof. Minh Le Nguyen - Japan Advanced Institute of Science and Technology (JAIST) - Supervisor 
