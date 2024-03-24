@@ -2,6 +2,11 @@
 This project solves the multimodal Fact-checking problem, which includes 3 subtasks: Claim Evidence retrieval, Claim verification, and Claim truthfulness explanation.  
 The detail of the project is described as follows.   
 
+## Dataset:  
+The dataset used in this projects are:   
++ Mocheg: https://github.com/VT-NLP/Mocheg   
++ FACTIFY: https://github.com/Shreyashm16/Factify     
+
 ## Task 1: Multimodal Evidence Retrieval   
 To be updated   
 
@@ -36,4 +41,4 @@ To be announced
 
 # Contributor 
 Son Thanh Luu - Japan Advanced Institute of Science and Technology (JAIST)  
-Prof. Minh Le Nguyen - Japan Advanced Institute of Science and Technology (JAIST)  
+Prof. Minh Le Nguyen - Japan Advanced Institute of Science and Technology (JAIST) - Supervisor 
