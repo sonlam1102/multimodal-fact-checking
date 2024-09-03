@@ -21,7 +21,7 @@ Parameters:
  --vision_pt: pre-trained LM for image encoding (ViT, DEiT, BEiT)  
  --long_pt: pre-trained LM for text evidence encoding (Longformer, BigBird)   
  --test: used for testing (without training)  
- --model_path  : path to saved model (used in testing phase).
+ --model_path  : path to saved model (used in testing phase).   
  --n_gpu:  number of GPUs (when having multiple GPUs)   
 
 ## Task 3: Multimodal Claim truthfulness Explanation 
