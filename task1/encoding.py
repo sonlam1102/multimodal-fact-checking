@@ -3,7 +3,10 @@ import argparse
 import torch
 from FlagEmbedding import BGEM3FlagModel
 import numpy as np
+
 from visualized_bge import Visualized_BGE
+# from FlagEmbedding.visual.modeling import Visualized_BGE
+
 from transformers import ViltImageProcessor
 from torch.utils.data import DataLoader
 from accelerate import Accelerator
@@ -36,8 +39,8 @@ def encoding_text(model, textdb):
 
     print(embedding.shape)
     print(embedding_id.shape)
-    np.save("./encode_embedding/text_embedding_db_flag.npy", embedding)
-    np.save("./encode_embedding/text_embedding_db_flag_id.npy", embedding_id)
+    np.save("./encode_embedding/text_embedding_db_flag_finetune.npy", embedding)
+    np.save("./encode_embedding/text_embedding_db_flag_finetune_id.npy", embedding_id)
 
 
 def encoding_sentence(model, sentenceDB):
@@ -66,7 +69,6 @@ def encoding_image(viz_model, imagedb):
         list_images.append(im[5])
         lst_ids.append(im[4])
 
-
     embedding = None
     embedding_id = np.array(lst_ids)
 
@@ -81,8 +83,8 @@ def encoding_image(viz_model, imagedb):
 
     print(embedding.shape)
     print(embedding_id.shape)
-    np.save("./encode_embedding/image_embedding_db_flag.npy", embedding)
-    np.save("./encode_embedding/image_embedding_db_flag_id.npy", embedding_id)
+    np.save("./encode_embedding/image_embedding_db_flag_finetune.npy", embedding)
+    np.save("./encode_embedding/image_embedding_db_flag_finetune_id.npy", embedding_id)
 
 
 def encoding_image_with_text(viz_model, imagedb, textdb):
@@ -208,7 +210,7 @@ def encoding_image3(image_model, processor, imagedb, device):
 
     print(embedding.shape)
     print(embedding_id.shape)
-    np.save("./encode_embedding/image_embedding_db_clip2.npy", embedding)
+    np.save("./encode_embedding/image_embedding_db_clip.npy", embedding)
     np.save("./encode_embedding/image_embedding_db_clip_id.npy", embedding_id)
 
 
@@ -220,23 +222,29 @@ if __name__ == '__main__':
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     DATA_PATH = args.db_path
-    model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=False, device=device)
-    viz_model = Visualized_BGE(model_name_bge="BAAI/bge-m3", model_weight="./Visualized_m3.pth")
+    # Original Models
+    # model = BGEM3FlagModel('BAAI/bge-m3', use_fp16=False, device=device)
+    # viz_model = Visualized_BGE(model_name_bge="BAAI/bge-visualized-base-en-v1.5", model_weight="./Visualized_m3.pth")
+    # image_model, processor = clip.load("ViT-L/14@336px", device=device)
 
-    image_model, processor = clip.load("ViT-L/14@336px", device=device)
+    # Fine-tune model
+    # model = BGEM3FlagModel('/home/s2320014/flag_bge_mocheg_finetune/text/BGE-Text-Retrieval', use_fp16=False, device=device)
+    viz_model = Visualized_BGE(model_name_bge="/home/s2320014/flag_bge_mocheg_finetune/image/BGE-Image-Retrieval-new-50-epoch/checkpoint-70000", model_weight="/home/s2320014/flag_bge_mocheg_finetune/image/BGE-Image-Retrieval-new-50-epoch/checkpoint-70000/BGE_EVA_Token.pth")
+    
     # viz_model = nn.DataParallel(viz_model, device_ids = [0, 1])
     # viz_model = Visualized_BGE(model_name_bge="BAAI/bge-base-en-v1.5", model_weight="./Visualized_base_en_v1.5.pth")
     # viz_model = ViltImageProcessor.from_pretrained("dandelin/vilt-b32-finetuned-coco")
     # viz_model = Visualized_BGE(model_name_bge="BAAI/bge-base-en-v1.5", model_weight="./Visualized_base_en_v1.5.pth")
 
-    text_evidences = get_text_evidences_db(DATA_PATH)
+    # text_evidences = get_text_evidences_db(DATA_PATH)
     # print(len(text_evidences))
     # encoding_text(model, text_evidences)
 
     image_evidences = get_image_evidences_db_path_only(DATA_PATH)
     print(len(image_evidences))
     # encoding_image_with_text(viz_model, image_evidences, text_evidences)
-    encoding_image3(image_model, processor, image_evidences, device)
+    encoding_image(viz_model, image_evidences)
+    # encoding_image3(image_model, processor, image_evidences, device)
 
     # image_evidences = get_image_evidences_db(DATA_PATH)
     # print(len(image_evidences))

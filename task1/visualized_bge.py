@@ -40,16 +40,20 @@ class Visualized_BGE(nn.Module):
         
         self.model_name_bge = model_name_bge
         
-        if 'bge-base-en-v1.5' in model_name_bge:
-            model_name_eva = "EVA02-CLIP-B-16"
-            self.hidden_dim = 768
-            self.depth = 12
-        elif 'bge-m3' in model_name_bge:
-            model_name_eva = "EVA02-CLIP-L-14"
-            self.hidden_dim = 1024
-            self.depth = 24
-        else:
-            raise Exception(f'Unavailable model_name {model_name_bge}')
+        # if 'bge-base-en-v1.5' in model_name_bge:
+        #     model_name_eva = "EVA02-CLIP-B-16"
+        #     self.hidden_dim = 768
+        #     self.depth = 12
+        # elif 'bge-m3' in model_name_bge:
+        #     model_name_eva = "EVA02-CLIP-L-14"
+        #     self.hidden_dim = 1024
+        #     self.depth = 24
+        # else:
+        #     raise Exception(f'Unavailable model_name {model_name_bge}')
+
+        model_name_eva = "EVA02-CLIP-B-16"
+        self.hidden_dim = 768
+        self.depth = 12
         
         quantization_config = BitsAndBytesConfig(
             load_in_4bit=True,
@@ -69,9 +73,14 @@ class Visualized_BGE(nn.Module):
             bge_config = AutoConfig.from_pretrained(from_pretrained, local_files_only=True, device_map='auto')
             bge = AutoModel.from_config(bge_config)
         
-        self.bge_encoder = bge.encoder
-        self.bge_embeddings = bge.embeddings
-        self.bge_pooler = bge.pooler
+        self.bge_model = AutoModel.from_pretrained(model_name_bge)
+        self.bge_encoder = self.bge_model.encoder
+        self.bge_embeddings = self.bge_model.embeddings
+        self.bge_pooler = self.bge_model.pooler
+
+        # self.bge_encoder = bge.encoder
+        # self.bge_embeddings = bge.embeddings
+        # self.bge_pooler = bge.pooler
 
         self.model_visual, self.preprocess_train, self.preprocess_val= create_eva_vision_and_transforms(
             model_name_eva, 

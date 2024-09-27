@@ -13,6 +13,8 @@ from read_data import get_dataset, read_image_caption
 from nltk.translate.bleu_score import sentence_bleu, SmoothingFunction
 from nltk.tokenize import word_tokenize
 from transformers import logging
+from tqdm import tqdm, trange
+
 logging.set_verbosity_warning()
 
 import logging
@@ -131,14 +133,14 @@ def train_model(train_data, device, batch_size, epoch=1, is_val=False, val_data=
     best_score = 0
     gen_model.train()
 
-    for e in range(epoch):
+    for e in trange(epoch):
         gen_model.train()
 
         total_loss = 0
 
         print("Epoch {}:\n ".format(e + 1))
 
-        for i in range(len(X)):
+        for i in trange(len(X)):
             optimizer_dec.zero_grad()
 
             main_seq = []
@@ -213,7 +215,7 @@ def predict(test_data, device, gen_model, tokenizer, batch_size):
 
     gen_model.eval()
 
-    for i in range(len(X)):
+    for i in trange(len(X)):
         main_seq = []
         y_new = []
         for j in range(len(X[i])):

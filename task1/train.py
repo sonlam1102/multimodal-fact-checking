@@ -2,8 +2,9 @@ import argparse
 import copy
 import datetime
 import os
+import json
 import heapq
-
+import shutil
 import pandas as pd
 from prettytable import PrettyTable
 from torch import optim
@@ -17,7 +18,7 @@ from tqdm import tqdm, trange
 from read_data import get_text_evidences_db, get_image_evidences_db_path_only
 from torch.utils.data import DataLoader
 
-from model import MultimodalRetrieval, MultimodalRetriever
+from model import MultimodalRetrieval, MultimodalRetriever, MultimodalReranker
 from evaluation import F1_k, Precision_k, Recall_k, mean_average_precision
 
 from accelerate import Accelerator
@@ -270,6 +271,7 @@ def retrieve_evidence(test_data, retriever, batch_size, top_k=5):
     pred_image = []
     g_text = []
     g_image = []
+    lst_querries = []
     for batch in tqdm(test_loader):
         text = []
         for b in batch['Claim']:
@@ -288,6 +290,7 @@ def retrieve_evidence(test_data, retriever, batch_size, top_k=5):
 
             pred_text.append(text_out_oh)
             pred_image.append(image_out_oh)
+            lst_querries.append(t)
 
     print("F1 Text: {}\n".format(F1_k(g_text, pred_text)))
     print("F1 Image: {}\n".format(F1_k(g_image, pred_image)))
@@ -301,10 +304,201 @@ def retrieve_evidence(test_data, retriever, batch_size, top_k=5):
     print("MAP Text: {}\n".format(mean_average_precision(g_text, pred_text, top_k)))
     print("MAP Image: {}\n".format(mean_average_precision(g_image, pred_image, top_k)))  
 
+    return lst_querries, pred_text, pred_image
+
+
+def retrieve_evidence_with_reranker(test_data, retriever, reranker, batch_size, top_k=5):
+    test_loader = DataLoader(test_data, batch_size=batch_size, shuffle=False)
+    print('Performing Retrieving + Reranking.......')
+    pred_text = []
+    pred_image = []
+    g_text = []
+    g_image = []
+    lst_querries = []
+    for batch in tqdm(test_loader):
+        text = []
+        for b in batch['Claim']:
+            text.append(b)
+        for b in batch['text_label']:
+            g_text.append(b)
+        for b in batch['image_label']:
+            g_image.append(b)
+
+        for t in text:
+            text_out = retriever.retrieve_text_similarity(t)
+            text_out_oh = get_top_k(text_out, 30)
+
+            image_out = retriever.retrieve_image_similarity(t)
+            image_out_oh = get_top_k(image_out, top_k)
+
+            text_reranker_out = reranker.retrieve_text_similarity(t, text_out_oh)
+            # image_reranker_out = reranker.retrieve_image_similarity(t, image_out_oh)
+
+            lst_text_reranker_out = np.array([t[1] for t in text_reranker_out])
+            # lst_image_reranker_out = np.array([t[1] for t in image_reranker_out])
+
+            lst_text_reranker_out_oh = get_top_k(lst_text_reranker_out, top_k)
+            # lst_image_reranker_out_oh = get_top_k(lst_image_reranker_out, top_k)
+
+            assert len(lst_text_reranker_out_oh) == len(text_reranker_out)
+            # assert len(lst_image_reranker_out_oh) == len(image_reranker_out)
+
+            final_text_out_oh = [0 for i in range(0, len(text_out_oh))]
+            for i in range(0, len(lst_text_reranker_out_oh)):
+                if lst_text_reranker_out_oh[i] > 0:
+                    final_text_out_oh[text_reranker_out[i][0]] = lst_text_reranker_out_oh[i]
+
+            # final_image_out_oh = [0 for i in range(0, len(image_out_oh))]
+            # for i in range(0, len(lst_image_reranker_out_oh)):
+            #     if lst_image_reranker_out_oh[i] > 0:
+            #         final_image_out_oh[image_reranker_out[i][0]] = lst_image_reranker_out_oh[i]
+
+            pred_text.append(final_text_out_oh)
+            # pred_image.append(final_image_out_oh)
+            pred_image.append(image_out_oh)
+
+            lst_querries.append(t)
+
+    print("F1 Text: {}\n".format(F1_k(g_text, pred_text)))
+    print("F1 Image: {}\n".format(F1_k(g_image, pred_image)))
+
+    print("Precision Text: {}\n".format(Precision_k(g_text, pred_text)))
+    print("Precision Image: {}\n".format(Precision_k(g_image, pred_image)))
+
+    print("Recall Text: {}\n".format(Recall_k(g_text, pred_text)))
+    print("Recall Image: {}\n".format(Recall_k(g_image, pred_image)))
+
+    print("MAP Text: {}\n".format(mean_average_precision(g_text, pred_text, top_k)))
+    print("MAP Image: {}\n".format(mean_average_precision(g_image, pred_image, top_k)))
+
+    return lst_querries, pred_text, pred_image
+    
+
+def make_hard_candiates(test_data, text_db_ids, text_db, image_db_ids, image_path, retriever, top_k=50):
+    print('Retrieving candidates.......')
+    g_text = []
+    g_image = []
+
+    final_candidate_text = []
+    final_candidate_image = []
+    for sample in tqdm(test_data):
+        positive_candidates_text = []
+        negative_candidates_text = []
+
+        positive_candidates_image = []
+        negative_candidates_image = []
+
+        text = sample['Claim']
+        g_text = sample['text_label']
+        g_image = sample['image_label']
+        text_out = retriever.retrieve_text_similarity(text)
+        text_out_oh = get_top_k(text_out, top_k)
+
+        image_out = retriever.retrieve_image_similarity(text)
+        image_out_oh = get_top_k(image_out, top_k)
+
+        pos_ids_text = []
+        pos_ids_image = []
+        for i in range(0, len(text_db_ids)):
+            if g_text[i] == 1:
+                pos_ids_text.append(text_db_ids[i])
+                text = text_db.loc[(text_db.relevant_document_id == text_db_ids[i])]['Origin Document'].values[0]
+                positive_candidates_text.append(text)
+        
+        for i in range(0, len(text_out_oh)):
+            if text_out_oh[i] > 1 and text_db_ids[i] not in pos_ids_text:
+                text = text_db.loc[(text_db.relevant_document_id == text_db_ids[i])]['Origin Document'].values[0]
+                negative_candidates_text.append(text)
+
+        for i in range(0, len(image_db_ids)):
+            if g_image[i] == 1:
+                pos_ids_image.append(image_db_ids[i])
+                positive_candidates_image.append(image_path+image_db_ids[i])
+        
+        for i in range(0, len(image_out_oh)):
+            if image_out_oh[i] > 1 and image_db_ids[i] not in pos_ids_image:
+                negative_candidates_image.append(image_path+image_db_ids[i])
+        
+        final_candidate_text.append({
+            "query": text,
+            "pos": positive_candidates_text,
+            "neg": negative_candidates_text
+        })
+
+        final_candidate_image.append({
+            "q_img": None,
+            "q_text": text,
+            "positive_key": pos_ids_image,
+            "positive_value": positive_candidates_image,
+            "hn_image": negative_candidates_image
+        })
+    
+    with open('./train_text_candidates.jsonl', 'w', encoding="utf-8") as outfile:
+        for entry in final_candidate_text:
+            json.dump(entry, outfile, ensure_ascii=False)
+            outfile.write('\n')
+    outfile.close()
+
+
+    with open('./train_image_candidates.jsonl', 'w', encoding="utf-8") as outfile:
+        for entry in final_candidate_image:
+            json.dump(entry, outfile, ensure_ascii=False)
+            outfile.write('\n')
+    outfile.close()
+
+    print("--Done--")
+
+
+def make_prediction_sample(lst_querries, pred_text, pred_image, text_db, text_ids, image_db, image_ids, ttype="dev"):
+    def find_image_path(image_id, image_db):
+            for img in image_db:
+                if image_id == img[4]:
+                    return img[5]
+                
+    assert len(lst_querries) == len(pred_text)
+    assert len(lst_querries) == len(pred_image)
+
+    text_ids = text_ids.tolist()
+    image_ids = image_ids.tolist()
+
+    sample_dump = []
+    for i in range(0, len(lst_querries)):
+        claim = lst_querries[i]
+        text_prediction = pred_text[i]
+        text_evidences = []
+        assert len(text_prediction) == len(text_ids)
+
+        for j in range(0, len(text_prediction)):
+            if text_prediction[j] > 0:
+                text_evidences.append({
+                    str(text_ids[j]): text_db.loc[(text_db.relevant_document_id == text_ids[j])]['Origin Document'].values[0]
+                })
+
+        image_prediction = pred_image[i]
+        image_evidences = []
+        assert len(image_prediction) == len(image_ids)
+
+        for k in range(0, len(image_prediction)):
+            if image_prediction[k] > 0:
+                im_path = find_image_path(image_ids[k], image_db)
+                image_evidences.append({
+                    image_ids[k]: im_path
+                })
+                # shutil.copy2(im_path, "./sample_dump/retrieved_images_{}/{}".format(ttype, image_ids[k]))
+        
+        sample_dump.append({
+            'claim': claim,
+            'text_evidence': text_evidences,
+            'image_evidence': image_evidences
+        })
+
+    with open('./sample_dump/pred_retrieval_{}.json'.format(ttype), 'w', encoding='utf-8') as f:
+        json.dump(sample_dump, f, ensure_ascii=False, indent=4)
+
 
 def parser_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', type=str, default="/home/s2320014/data")
+    parser.add_argument('--path', type=str, default="/home/s2320014/data/")
     parser.add_argument('--model_path', type=str, default="")
     parser.add_argument('--top_k', type=int, default=5)
     parser.add_argument('--n_gpu', type=int, default=None)
@@ -315,11 +509,21 @@ def parser_args():
 if __name__ == '__main__':
     args = parser_args()
     DATA_PATH = args.path
-    # text_evidences_db = get_text_evidences_db(DATA_PATH)
+    text_db = get_text_evidences_db(DATA_PATH)
     # image_evidences_db = get_image_evidences_db_path_only(DATA_PATH)
 
-    text_evidences_db = np.load("./encode_embedding/text_embedding_db_flag_id.npy")
-    image_evidences_db = np.load("./encode_embedding/image_embedding_db_flag_id.npy")
+    n_gpu = args.n_gpu
+    if n_gpu:
+        device = torch.device('cuda:{}'.format(n_gpu) if torch.cuda.is_available() else 'cpu')
+    else:
+        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
+    
+    retriever = MultimodalRetriever(device)
+    retriever.build_flag_embedding("./encode_embedding")
+
+    # text_evidences_db = np.load("./encode_embedding/text_embedding_db_flag_id.npy")
+    # image_evidences_db = np.load("./encode_embedding/image_embedding_db_clip_id.npy")
+    text_evidences_db, image_evidences_db = retriever.get_evidence_db_ids()
 
     # train = pd.read_csv(DATA_PATH+"/train/img_evidence_qrels.csv")
     # k = make_one_hot_image(train, image_evidences)
@@ -341,19 +545,11 @@ if __name__ == '__main__':
     dev_data = ClaimRetrievalDataset(dev, dev_qrels_text, text_evidences_db, dev_qrels_image, image_evidences_db)
     test_data = ClaimRetrievalDataset(test, test_qrels_text, text_evidences_db, test_qrels_image, image_evidences_db)
 
-    n_gpu = args.n_gpu
-    if n_gpu:
-        device = torch.device('cuda:{}'.format(n_gpu) if torch.cuda.is_available() else 'cpu')
-    else:
-        device = torch.device('cuda:0' if torch.cuda.is_available() else 'cpu')
-
     # model, loss = train_model(train_data, batch_size=32, epoch=2, top_k=5, is_val=True, val_data=dev_data, device=device)
     # a = np.array([0.8, 0.79, 0.01, 0.05, 0.1, 0.2])
     # out = get_top_k(a, 3)
     # print(out)
-    
-    retriever = MultimodalRetriever(device)
-    retriever.build_flag_embedding("./encode_embedding")
 
-    print(" ==== K = {} ==== ".format(args.top_k))
+    # print(" ==== K = {} ==== ".format(args.top_k))
     retrieve_evidence(dev_data, retriever, batch_size=64, top_k=args.top_k)
+    # make_hard_candiates(train_data, text_evidences_db, text_db, image_evidences_db, DATA_PATH+"/images/", retriever, top_k=15)

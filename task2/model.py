@@ -6,6 +6,7 @@ import torch
 from transformers import AutoTokenizer, AutoModel
 from transformers import LongformerTokenizer, LongformerModel
 import torch.nn.functional as F
+from PIL import Image
 
 
 class MultiModalClassification(nn.Module):
@@ -88,7 +89,7 @@ class MultiModalClassification(nn.Module):
         for claim_feature in claim_features:
             claim = claim_feature['claim']
             text_evidence = [x for x in claim_feature['text_evidence'] if str(x) != 'nan']
-            image_evidence = claim_feature['image_evidence']
+            image_evidence = [Image.open(simg) for simg in claim_feature['image_evidence']]
 
             if len(text_evidence) == 0:
                 text_evidence.append("")

@@ -3,6 +3,7 @@ import json
 import pandas as pd
 import cv2
 import glob
+from tqdm import tqdm, trange
 
 DATA_PATH = '../data'
 
@@ -68,14 +69,46 @@ def read_image(path):
     })
 
 
+def read_image_path_only(path):
+    # imdir = 'path/to/files/'
+    ext = ['jpg', 'jpeg', 'png']
+
+    files = []
+    images = []
+    names = []
+    claim = []
+    ids = []
+    desc = []
+    for e in ext:
+        for img in glob.glob(path + "/*." + e):
+            files.append(img)
+
+    for f in files:
+        names.append(f.split('/')[-1])
+        claim.append(int(f.split('/')[-1].split('-')[0]))
+        ids.append(int(f.split('/')[-1].split('-')[2]))
+        desc.append(f.split('/')[-1].split('-')[3])
+        images.append(f)
+
+    # images = [cv2.imread(file) for file in files]
+    #
+    return pd.DataFrame({
+        'claim_id': claim,
+        'id': names,
+        'image': images,
+        'image_id': ids,
+        'description': desc
+    })
+
+
 def read_images_corpus(path):
     train = path + '/train/images'
     dev = path + '/val/images'
     test = path + '/test/images'
 
-    train_images = read_image(train)
-    dev_images = read_image(dev)
-    test_images = read_image(test)
+    train_images = read_image_path_only(train)
+    dev_images = read_image_path_only(dev)
+    test_images = read_image_path_only(test)
 
     return (train_images, dev_images, test_images)
 
@@ -85,7 +118,7 @@ def retrieve_data_for_verification(train_text, train_images):
     claim_ids = list(set(claim_ids))
 
     claim_data = []
-    for claim_id in claim_ids:
+    for claim_id in tqdm(claim_ids):
         df = train_text.loc[(train_text.claim_id == claim_id)]
         text_evidences = df['Evidence'].values
         image_evidences = train_images.loc[(train_images.claim_id == claim_id)]['image'].values

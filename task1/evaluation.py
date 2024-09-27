@@ -109,14 +109,18 @@ if __name__ == '__main__':
     # print(Recall_k(lst_gt, lst_pred))
 
     lst_pred = [
-        [2, 3, 1, 4, 6, 0, 0, 0, 5],
-        [2, 5, 4, 3, 1, 6, 0, 0, 0], 
-        [1, 2, 3, 4, 5, 6, 0, 0, 0]
+        [1, 0, 2, 3, 0, 4, 0, 5, 0, 0, 0, 0, 0, 0, 0],
+        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 
+        # [1, 2, 3, 0, 0, 0, 0, 0, 0]
     ]
 
     lst_gt = [
-        [1, 1, 1, 0, 0, 0, 0, 0, 0],
-        [1, 0, 0, 0, 1, 1, 0, 0, 0],
-        [0, 0, 0, 1, 1, 1, 0, 0, 0]
+        [1, 0, 1, 1, 0, 1, 0, 1, 0, 0, 1, 0, 1, 1, 0],
+        [0, 0, 0, 0, 0, 1, 1, 1, 1, 1],
+        # [0, 0, 0, 1, 1, 1, 0, 0, 0]
     ]
-    print(mean_average_precision(lst_gt, lst_pred, 6))
+
+    print(F1_k(lst_gt, lst_pred))
+    print(Precision_k(lst_gt, lst_pred))
+    print(Recall_k(lst_gt, lst_pred))
+    print(mean_average_precision(lst_gt, lst_pred, 5))

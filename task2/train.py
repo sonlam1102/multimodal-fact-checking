@@ -12,6 +12,7 @@ import torch
 from sklearn.metrics import f1_score, confusion_matrix
 import torch.nn.functional as F
 import copy
+from tqdm import tqdm, trange
 
 from model import MultiModalClassification
 
@@ -137,12 +138,12 @@ def train_model(train_data, batch_size, epoch=1, is_val=False, val_data=None, cl
     os.makedirs("{}/checkpoint".format(chk_dir))
 
     X, y, _ = make_batch(train_data, batch_size=batch_size)
-    for e in range(epoch):
+    for e in trange(epoch):
         model.train()
         total_loss = 0
         print("Epoch {}:\n ".format(e + 1))
 
-        for i in range(len(X)):
+        for i in trange(len(X)):
             optimizer.zero_grad()
             batch_x = X[i]
             score, lb = model(batch_x, y[i])
@@ -213,12 +214,12 @@ def train_resume(train_data, chkpoint, is_val=False, val_data=None, claim_pt="ro
     os.makedirs(chk_dir)
     os.makedirs("{}/checkpoint".format(chk_dir))
 
-    for e in range(chkpoint['current_epoch'], epoch):
+    for e in trange(chkpoint['current_epoch'], epoch):
         model.train()
         total_loss = 0
         print("Epoch {}:\n ".format(e + 1))
 
-        for i in range(len(X)):
+        for i in trange(len(X)):
             optimizer.zero_grad()
             batch_x = X[i]
             score, lb = model(batch_x, y[i])
@@ -272,7 +273,7 @@ def predict(test_data, model, batch_size, device=None):
     model.eval()
     print('Predict.......')
 
-    for i in range(len(X)):
+    for i in trange(len(X)):
         batch_x = X[i]
         batch_y = y[i]
         batch_z = z[i]
