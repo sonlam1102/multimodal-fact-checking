@@ -272,6 +272,7 @@ def retrieve_evidence(test_data, retriever, batch_size, top_k=5):
     g_text = []
     g_image = []
     lst_querries = []
+    lst_query_ids = []
     for batch in tqdm(test_loader):
         text = []
         for b in batch['Claim']:
@@ -280,6 +281,8 @@ def retrieve_evidence(test_data, retriever, batch_size, top_k=5):
             g_text.append(b)
         for b in batch['image_label']:
             g_image.append(b)
+        for b in batch['claim_id']:
+            lst_query_ids.append(b.item())
 
         for t in text:
             text_out = retriever.retrieve_text_similarity(t)
@@ -301,10 +304,11 @@ def retrieve_evidence(test_data, retriever, batch_size, top_k=5):
     print("Recall Text: {}\n".format(Recall_k(g_text, pred_text)))
     print("Recall Image: {}\n".format(Recall_k(g_image, pred_image)))
 
-    print("MAP Text: {}\n".format(mean_average_precision(g_text, pred_text, top_k)))
-    print("MAP Image: {}\n".format(mean_average_precision(g_image, pred_image, top_k)))  
+    print("MAP Text: {}\n".format(mean_average_precision(g_text, pred_text)))
+    print("MAP Image: {}\n".format(mean_average_precision(g_image, pred_image)))  
 
-    return lst_querries, pred_text, pred_image
+    assert len(lst_query_ids) == len(lst_querries)
+    return lst_querries, lst_query_ids, pred_text, pred_image
 
 
 def retrieve_evidence_with_reranker(test_data, retriever, reranker, batch_size, top_k=5):
@@ -315,6 +319,7 @@ def retrieve_evidence_with_reranker(test_data, retriever, reranker, batch_size, 
     g_text = []
     g_image = []
     lst_querries = []
+    lst_query_ids = []
     for batch in tqdm(test_loader):
         text = []
         for b in batch['Claim']:
@@ -323,10 +328,12 @@ def retrieve_evidence_with_reranker(test_data, retriever, reranker, batch_size, 
             g_text.append(b)
         for b in batch['image_label']:
             g_image.append(b)
+        for b in batch['claim_id']:
+            lst_query_ids.append(b.item())
 
         for t in text:
             text_out = retriever.retrieve_text_similarity(t)
-            text_out_oh = get_top_k(text_out, 30)
+            text_out_oh = get_top_k(text_out, 50)
 
             image_out = retriever.retrieve_image_similarity(t)
             image_out_oh = get_top_k(image_out, top_k)
@@ -368,10 +375,11 @@ def retrieve_evidence_with_reranker(test_data, retriever, reranker, batch_size, 
     print("Recall Text: {}\n".format(Recall_k(g_text, pred_text)))
     print("Recall Image: {}\n".format(Recall_k(g_image, pred_image)))
 
-    print("MAP Text: {}\n".format(mean_average_precision(g_text, pred_text, top_k)))
-    print("MAP Image: {}\n".format(mean_average_precision(g_image, pred_image, top_k)))
+    print("MAP Text: {}\n".format(mean_average_precision(g_text, pred_text)))
+    print("MAP Image: {}\n".format(mean_average_precision(g_image, pred_image)))
 
-    return lst_querries, pred_text, pred_image
+    assert len(lst_query_ids) == len(lst_querries)
+    return lst_querries, lst_query_ids, pred_text, pred_image
     
 
 def make_hard_candiates(test_data, text_db_ids, text_db, image_db_ids, image_path, retriever, top_k=50):
@@ -449,7 +457,7 @@ def make_hard_candiates(test_data, text_db_ids, text_db, image_db_ids, image_pat
     print("--Done--")
 
 
-def make_prediction_sample(lst_querries, pred_text, pred_image, text_db, text_ids, image_db, image_ids, ttype="dev"):
+def make_prediction_sample(lst_querries, lst_querry_ids, pred_text, pred_image, text_db, text_ids, image_db, image_ids, ttype="dev"):
     def find_image_path(image_id, image_db):
             for img in image_db:
                 if image_id == img[4]:
@@ -457,6 +465,7 @@ def make_prediction_sample(lst_querries, pred_text, pred_image, text_db, text_id
                 
     assert len(lst_querries) == len(pred_text)
     assert len(lst_querries) == len(pred_image)
+    assert len(lst_querries) == len(lst_querry_ids)
 
     text_ids = text_ids.tolist()
     image_ids = image_ids.tolist()
@@ -464,6 +473,7 @@ def make_prediction_sample(lst_querries, pred_text, pred_image, text_db, text_id
     sample_dump = []
     for i in range(0, len(lst_querries)):
         claim = lst_querries[i]
+        claim_id = lst_querry_ids[i]
         text_prediction = pred_text[i]
         text_evidences = []
         assert len(text_prediction) == len(text_ids)
@@ -487,6 +497,7 @@ def make_prediction_sample(lst_querries, pred_text, pred_image, text_db, text_id
                 # shutil.copy2(im_path, "./sample_dump/retrieved_images_{}/{}".format(ttype, image_ids[k]))
         
         sample_dump.append({
+            'claim_id': str(claim_id),
             'claim': claim,
             'text_evidence': text_evidences,
             'image_evidence': image_evidences
