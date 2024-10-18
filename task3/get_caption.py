@@ -65,7 +65,8 @@ def get_captioning(sample, device):
         image_to_text = pipeline("image-to-text", model="nlpconnect/vit-gpt2-image-captioning",
                                  device=device)
         for t in image_evidence:
-            pill = Image.fromarray(t)
+            # pill = Image.fromarray(t)
+            pill = Image.open(t)
             te = image_to_text(pill)[0]['generated_text']
             image_text.append(te)
 
@@ -96,7 +97,8 @@ def prompt_captioning(sample, device, processor, model):
 
     if len(image_evidence) > 0:
         for im in image_evidence:
-            pill = Image.fromarray(im).convert("RGB")
+            # pill = Image.fromarray(im).convert("RGB")
+            pill = Image.open(im)
             inputs = processor(images=pill, text=prompt, return_tensors="pt").to(device)
             outputs = model.generate(
                 **inputs,
