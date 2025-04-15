@@ -14,7 +14,7 @@ import torch.nn.functional as F
 import copy
 from tqdm import tqdm, trange
 
-from model import MultiModalClassification
+from model import *
 
 
 def one_hot(a, num_classes):
@@ -114,8 +114,9 @@ def train_model(train_data, batch_size, epoch=1, is_val=False, val_data=None, cl
     # else:
     #     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     model = MultiModalClassification(device, claim_pt, vision_pt, long_pt)
+    # model = MultiModalClassificationNoAttention(device, claim_pt, vision_pt, long_pt)
     model = model.to(device)
-    print(model)
+    # print(model)
     loss_function = FocalLoss(gamma=2)
 
     loss_function = loss_function.to(device)
