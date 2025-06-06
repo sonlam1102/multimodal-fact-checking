@@ -37,7 +37,20 @@ Parameters:
  --n_gpu:  number of GPUs (when having multiple GPUs)  
  
 # Publication 
-To be announced 
+Luu, Son T., Trung Vo, and Le-Minh Nguyen. "MCVE: multimodal claim verification and explanation framework for fact-checking system." Multimedia Systems 31.3 (2025): 1-24.
+```
+@article{luu2025mcve,
+  title={MCVE: multimodal claim verification and explanation framework for fact-checking system},
+  author={Luu, Son T and Vo, Trung and Nguyen, Le-Minh},
+  journal={Multimedia Systems},
+  volume={31},
+  number={3},
+  pages={1--24},
+  year={2025},
+  publisher={Springer}
+}
+
+```
 
 # Contributor 
 Son Thanh Luu - Japan Advanced Institute of Science and Technology (JAIST)  
