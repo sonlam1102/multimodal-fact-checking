@@ -396,13 +396,13 @@ def make_hard_candiates(test_data, text_db_ids, text_db, image_db_ids, image_pat
         positive_candidates_image = []
         negative_candidates_image = []
 
-        text = sample['Claim']
+        text_claim = sample['Claim']
         g_text = sample['text_label']
         g_image = sample['image_label']
-        text_out = retriever.retrieve_text_similarity(text)
+        text_out = retriever.retrieve_text_similarity(text_claim)
         text_out_oh = get_top_k(text_out, top_k)
 
-        image_out = retriever.retrieve_image_similarity(text)
+        image_out = retriever.retrieve_image_similarity(text_claim)
         image_out_oh = get_top_k(image_out, top_k)
 
         pos_ids_text = []
@@ -427,15 +427,27 @@ def make_hard_candiates(test_data, text_db_ids, text_db, image_db_ids, image_pat
             if image_out_oh[i] > 1 and image_db_ids[i] not in pos_ids_image:
                 negative_candidates_image.append(image_path+image_db_ids[i])
         
+        if len(positive_candidates_text) == 0:
+            positive_candidates_text.append("")
+        
+        if len(negative_candidates_text) == 0:
+            negative_candidates_text.append("")
+
+        if len(positive_candidates_image) == 0:
+            positive_candidates_image.append("")
+        
+        if len(negative_candidates_image) == 0:
+            negative_candidates_image.append("")
+
         final_candidate_text.append({
-            "query": text,
+            "query": text_claim,
             "pos": positive_candidates_text,
             "neg": negative_candidates_text
         })
 
         final_candidate_image.append({
             "q_img": None,
-            "q_text": text,
+            "q_text": text_claim,
             "positive_key": pos_ids_image,
             "positive_value": positive_candidates_image,
             "hn_image": negative_candidates_image
