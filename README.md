@@ -8,11 +8,11 @@ The dataset used in this projects are:
 + FACTIFY: https://github.com/Shreyashm16/Factify     
 
 ## Task 1: Multimodal Evidence Retrieval   
-How to run code: python task1/main.py <list_of_parameters> 
-Parameters: 
---path  :  path to the training data   
---top_k  : the top k retrieved candidates 
---test  : running on test set if this argument is set. If not, the program will run on the development set of Mocheg. 
+How to run code: python task1/main.py <list_of_parameters>    
+Parameters:    
+ --path  :  path to the training data     
+ --top_k  : the top k retrieved candidates    
+ --test  : running on test set if this argument is set. If not, the program will run on the development set of Mocheg.  
 
 Summary of the evidence: Please check and run the "summary.py" for fine-tuning the encoder-decoder model. The file "do_summary.py" will infer the fine-tuned summary model.    
 
