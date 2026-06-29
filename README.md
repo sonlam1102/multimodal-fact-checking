@@ -64,4 +64,4 @@ Trung Vo - Japan Advanced Institute of Science and Technology (JAIST)
 Prof. Minh Le Nguyen - Japan Advanced Institute of Science and Technology (JAIST) - Supervisor 
 
 # Contact 
-M.r Son Luu (sonlt@uit.edu.vn or son.lt1103@gmail.com)  
+Mr. Son Luu (sonlt@uit.edu.vn or son.lt1103@gmail.com)  
